@@ -130,7 +130,7 @@
     - [Diagnostic items](./diagnostics/diagnostic-items.md)
     - [`ErrorGuaranteed`](./diagnostics/error-guaranteed.md)
 
-# Analysis
+# Analysis oh boy
 
 - [Prologue](./part-4-intro.md)
 - [Generic parameter definitions](./generic_parameters_summary.md)
