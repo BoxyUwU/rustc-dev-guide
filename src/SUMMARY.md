@@ -5,7 +5,7 @@
 
 ---
 
-# Building and debugging `rustc`
+# Building and debugging `rustc` meow :3
 
 - [How to build and run the compiler](./building/how-to-build-and-run.md)
     - [Quickstart](./building/quickstart.md)
