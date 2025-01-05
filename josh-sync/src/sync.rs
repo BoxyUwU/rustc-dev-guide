@@ -1,15 +1,15 @@
+use anyhow::{anyhow, bail, Context};
+use std::io::Write;
 use std::ops::Not;
 use std::path::PathBuf;
-use std::{env, net, process};
-use std::io::Write;
 use std::time::Duration;
-use anyhow::{anyhow, bail, Context};
+use std::{env, net, process};
 use xshell::{cmd, Shell};
 
 /// Used for rustc syncs.
 const JOSH_FILTER: &str = ":/src/doc/rustc-dev-guide";
 const JOSH_PORT: u16 = 42042;
-const UPSTREAM_REPO: &str = "rust-lang/rust";
+const UPSTREAM_REPO: &str = "BoxyUwU/rust";
 
 pub struct GitSync {
     dir: PathBuf,
@@ -20,7 +20,7 @@ pub struct GitSync {
 impl GitSync {
     pub fn from_current_dir() -> anyhow::Result<Self> {
         Ok(Self {
-            dir: std::env::current_dir()?
+            dir: std::env::current_dir()?,
         })
     }
 
@@ -37,7 +37,11 @@ impl GitSync {
                 .ok_or_else(|| anyhow!("Could not obtain Rust repo HEAD from remote."))
         })?;
         // Make sure the repo is clean.
-        if cmd!(sh, "git status --untracked-files=no --porcelain").read()?.is_empty().not() {
+        if cmd!(sh, "git status --untracked-files=no --porcelain")
+            .read()?
+            .is_empty()
+            .not()
+        {
             bail!("working directory must be clean before performing rustc pull");
         }
         // Make sure josh is running.
@@ -52,9 +56,12 @@ impl GitSync {
         // the right rust-version file while resolving them.
         sh.write_file("rust-version", format!("{commit}\n"))?;
         const PREPARING_COMMIT_MESSAGE: &str = "Preparing for merge from rustc";
-        cmd!(sh, "git commit rust-version --no-verify -m {PREPARING_COMMIT_MESSAGE}")
-            .run()
-            .context("FAILED to commit rust-version file, something went wrong")?;
+        cmd!(
+            sh,
+            "git commit rust-version --no-verify -m {PREPARING_COMMIT_MESSAGE}"
+        )
+        .run()
+        .context("FAILED to commit rust-version file, something went wrong")?;
 
         // Fetch given rustc commit.
         cmd!(sh, "git fetch {josh_url}")
@@ -78,9 +85,12 @@ impl GitSync {
 
         // Merge the fetched commit.
         const MERGE_COMMIT_MESSAGE: &str = "Merge from rustc";
-        cmd!(sh, "git merge FETCH_HEAD --no-verify --no-ff -m {MERGE_COMMIT_MESSAGE}")
-            .run()
-            .context("FAILED to merge new commits, something went wrong")?;
+        cmd!(
+            sh,
+            "git merge FETCH_HEAD --no-verify --no-ff -m {MERGE_COMMIT_MESSAGE}"
+        )
+        .run()
+        .context("FAILED to merge new commits, something went wrong")?;
 
         // Check that the number of roots did not increase.
         if num_roots()? != num_roots_before {
@@ -96,7 +106,11 @@ impl GitSync {
         sh.change_dir(&self.dir);
         let base = sh.read_file("rust-version")?.trim().to_owned();
         // Make sure the repo is clean.
-        if cmd!(sh, "git status --untracked-files=no --porcelain").read()?.is_empty().not() {
+        if cmd!(sh, "git status --untracked-files=no --porcelain")
+            .read()?
+            .is_empty()
+            .not()
+        {
             bail!("working directory must be clean before running `rustc-push`");
         }
         // Make sure josh is running.
@@ -127,10 +141,13 @@ impl GitSync {
         // the commit that we pulled from last time, so we use the `rust-version`
         // file to find out which commit that would be.
         println!("Preparing {github_user}/rust (base: {base})...");
-        if cmd!(sh, "git fetch https://github.com/{github_user}/rust {branch}")
-            .ignore_stderr()
-            .read()
-            .is_ok()
+        if cmd!(
+            sh,
+            "git fetch https://github.com/{github_user}/rust {branch}"
+        )
+        .ignore_stderr()
+        .read()
+        .is_ok()
         {
             println!(
                 "The branch '{branch}' seems to already exist in 'https://github.com/{github_user}/rust'. Please delete it and try again."
@@ -138,10 +155,13 @@ impl GitSync {
             std::process::exit(1);
         }
         cmd!(sh, "git fetch https://github.com/{UPSTREAM_REPO} {base}").run()?;
-        cmd!(sh, "git push https://github.com/{github_user}/rust {base}:refs/heads/{branch}")
-            .ignore_stdout()
-            .ignore_stderr() // silence the "create GitHub PR" message
-            .run()?;
+        cmd!(
+            sh,
+            "git push https://github.com/{github_user}/rust {base}:refs/heads/{branch}"
+        )
+        .ignore_stdout()
+        .ignore_stderr() // silence the "create GitHub PR" message
+        .run()?;
         println!();
 
         // Do the actual push.
@@ -151,7 +171,9 @@ impl GitSync {
         println!();
 
         // Do a round-trip check to make sure the push worked as expected.
-        cmd!(sh, "git fetch {josh_url} {branch}").ignore_stderr().read()?;
+        cmd!(sh, "git fetch {josh_url} {branch}")
+            .ignore_stderr()
+            .read()?;
         let head = cmd!(sh, "git rev-parse HEAD").read()?;
         let fetch_head = cmd!(sh, "git rev-parse FETCH_HEAD").read()?;
         if head != fetch_head {
@@ -188,7 +210,9 @@ impl GitSync {
         cmd.arg("--no-background");
         cmd.stdout(process::Stdio::null());
         cmd.stderr(process::Stdio::null());
-        let josh = cmd.spawn().context("failed to start josh-proxy, make sure it is installed")?;
+        let josh = cmd
+            .spawn()
+            .context("failed to start josh-proxy, make sure it is installed")?;
 
         // Create a wrapper that stops it on drop.
         struct Josh(process::Child);
@@ -204,7 +228,12 @@ impl GitSync {
                     // Sadly there is no "wait with timeout"... so we just give it some time to finish.
                     std::thread::sleep(Duration::from_millis(100));
                     // Now hopefully it is gone.
-                    if self.0.try_wait().expect("failed to wait for josh-proxy").is_some() {
+                    if self
+                        .0
+                        .try_wait()
+                        .expect("failed to wait for josh-proxy")
+                        .is_some()
+                    {
                         return;
                     }
                 }
