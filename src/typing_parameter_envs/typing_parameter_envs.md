@@ -39,7 +39,7 @@ A more concrete example:
 // `foo` would have a `ParamEnv` of:
 // `[T: Sized, T: Clone]`
 fn foo<T: Clone>(a: T) {
-    // when typechecking `foo` we require all the where clauses on `bar`
+    // when typechecking `foo` we require all the where clauses on `requires_clone`
     // to hold in order for it to be legal to call. This means we have to
     // prove `T: Clone`. As we are type checking `foo` we use `foo`'s
     // environment when trying to check that `T: Clone` holds.
